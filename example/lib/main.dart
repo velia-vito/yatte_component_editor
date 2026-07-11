@@ -8,19 +8,19 @@ import 'dart:io'; // Required for File IO
 
 Future<void> main() async {
   var wordCount = 1024;
-  var addTextCount = 2;
+  var addTextCount = 64;
 
   // 1. Initialize File and Sink
-  final file = File('measurement_test.csv');
+  final file = File('1024_64_measurement.csv');
   final sink = file.openWrite();
 
   var runTime = Duration(milliseconds: 0);
   var lastRunTime = runTime;
   var lastlastRunTime = runTime;
 
-  var testAtoms = getAtoms(_generateText(wordCount));
+  var testText = getAtoms(_generateText(wordCount));
   // Convert to List immediately to avoid Concurrent Modification errors during the loop
-  var addText = testAtoms.getRange(0, addTextCount).toList();
+  var addText = testText.getRange(0, addTextCount);
 
   // 2. Write CSV Headers
   sink.writeln("sep=,");
@@ -35,12 +35,14 @@ Future<void> main() async {
     lastlastRunTime = lastRunTime;
     lastRunTime = runTime;
 
-    (runTime, _) = _timeMethod(measureAllAtomWidth, testAtoms);
+    List<double> widths;
+
+    (runTime, widths) = _timeMethod(measureAllAtomWidth, testText);
 
     // 3. Write data row to file
-    sink.writeln("${testAtoms.length}, ${runTime.inMicroseconds}");
+    sink.writeln("${widths.length}, ${runTime.inMicroseconds}");
 
-    testAtoms.addAll(addText);
+    testText.addAll(addText);
   }
 
   // 4. Close the sink to save the file
@@ -73,10 +75,21 @@ Paragraph measureAtom(String text) {
   return paragraph;
 }
 
-void measureAllAtomWidth(List<String> atoms) {
-  for (var a in atoms) {
-    measureAtom(a);
+List<double> measureAllAtomWidth(List<String> atoms) {
+  var layout = measureAtom(atoms.join(" "));
+
+  var widths = <double>[];
+  var cPos = 0;
+
+  for (var atom in atoms) {
+    if (atom.length != 0) {
+      var tBox = layout.getBoxesForRange(cPos, cPos + atom.length);
+      widths.add(tBox.first.toRect().width);
+    }
+    cPos += atom.length + 1;
   }
+
+  return widths;
 }
 
 String _generateText([int wordCount = 1024]) {
