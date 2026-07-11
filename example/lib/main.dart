@@ -7,20 +7,17 @@ import 'dart:ui';
 import 'dart:io'; // Required for File IO
 
 Future<void> main() async {
-  var wordCount = 1024;
-  var addTextCount = 64;
-
   // 1. Initialize File and Sink
-  final file = File('1024_64_measurement.csv');
+  final file = File('250_250_measurement.csv');
   final sink = file.openWrite();
 
   var runTime = Duration(milliseconds: 0);
   var lastRunTime = runTime;
   var lastlastRunTime = runTime;
 
-  var testText = getAtoms(_generateText(wordCount));
-  // Convert to List immediately to avoid Concurrent Modification errors during the loop
-  var addText = testText.getRange(0, addTextCount);
+  var rE = Random.secure();
+
+  var testText = getAtoms(_generateText(rE.nextInt(250)));
 
   // 2. Write CSV Headers
   sink.writeln("sep=,");
@@ -29,20 +26,24 @@ Future<void> main() async {
   // Also print to console so you can see progress
   print("Benchmarking... writing to ${file.path}");
 
+  var paragraphCount = 0;
+
   while (runTime.inMicroseconds <= 25000 ||
       lastRunTime.inMicroseconds <= 25000 ||
       lastlastRunTime.inMicroseconds <= 25000) {
+    if (paragraphCount > 50000) break;
+
+    paragraphCount += 1;
+
     lastlastRunTime = lastRunTime;
     lastRunTime = runTime;
 
-    List<double> widths;
-
-    (runTime, widths) = _timeMethod(measureAllAtomWidth, testText);
+    (runTime, _) = _timeMethod(measureAllAtomWidth, testText);
 
     // 3. Write data row to file
-    sink.writeln("${widths.length}, ${runTime.inMicroseconds}");
+    sink.writeln("${paragraphCount}, ${runTime.inMicroseconds}");
 
-    testText.addAll(addText);
+    testText = getAtoms(_generateText(rE.nextInt(250)));
   }
 
   // 4. Close the sink to save the file
